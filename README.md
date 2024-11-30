@@ -1,0 +1,1 @@
+# rezervare_curse
