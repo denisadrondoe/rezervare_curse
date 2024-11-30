@@ -450,7 +450,6 @@ public:
         }
 
         // verificam daca exista cursa in fiserul curse.csv
-        cout << "CURSELE DISPONIBILE SUNT: ";
         bool cursaGasita = false; // pt a determina daca s a gasit cursa
 
         // afisam tot ce se afla in fisierul curese.csv
@@ -470,12 +469,6 @@ public:
             ss >> fileClasa;
             ss.ignore();
             ss >> fileNumarLocuri;
-
-            // afisam cursa curenta
-            //  Afișăm cursa curentă
-            cout << filePlecare << " -> " << fileDestinatie << " | Data: " << fileData
-                 << " | Ora: " << fileOra << " | Clasa: " << fileClasa
-                 << " | Locuri disponibile: " << fileNumarLocuri << endl;
 
             // Verificăm dacă aceasta este cursa căutată
             if (fileDestinatie == destinatie && filePlecare == plecare && fileData == data && fileOra == ora && fileClasa == clasa)
@@ -523,6 +516,39 @@ public:
         rezervariOut.close();
     }
 };
+void afiseazaCurseDisponibile()
+{
+    ifstream inFile("curse.csv");
+    if (!inFile.is_open())
+    {
+        throw runtime_error("Nu s-a putut deschide fisierul curse.csv");
+    }
+
+    cout << "CURSELE DISPONIBILE SUNT:\n";
+    string line;
+    while (getline(inFile, line))
+    {
+        stringstream ss(line);
+        string destinatie, plecare, data, ora;
+        int clasa, locuri;
+
+        // Citim câmpurile din linie
+        getline(ss, destinatie, ',');
+        getline(ss, plecare, ',');
+        getline(ss, data, ',');
+        getline(ss, ora, ',');
+        ss >> clasa;
+        ss.ignore();
+        ss >> locuri;
+
+        // Afișăm cursa curentă
+        cout << destinatie << " -> " <<  plecare << " | Data: " << data
+             << " | Ora: " << ora << " | Clasa: " << clasa
+             << " | Locuri disponibile: " << locuri << endl;
+    }
+
+    inFile.close();
+}
 
 // functia main
 int main()
@@ -676,6 +702,9 @@ int main()
 
                         if (rezervareOptiune == 1)
                         {
+                            // Afișăm cursele disponibile
+                            afiseazaCurseDisponibile();
+
                             string destinatie, plecare, data, ora;
                             int clasa, locuri;
                             cout << "Introduceti destinatia: ";
