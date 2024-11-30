@@ -245,11 +245,12 @@ public:
 // clasa pentru Utilizator
 class Utilizator
 {
-public:
+private:
     string username;
     string email;
     string password;
 
+public:
     Utilizator(string user, string mail, string pass) : username(user), email(mail), password(pass) {}
 
     // functia pentru email valid
@@ -366,20 +367,13 @@ public:
         // verificam daca formatul email-ului este corect
         isValidEmail(email);
 
-        // verificam puterea acesteia
-        passwordStrength(parola);
-        // daca parola este puternica
-        string passwordStrengthLevel = passwordStrength(parola);
-        if (passwordStrengthLevel == "weak")
-        {
-            throw invalid_argument("Parola introdusa este slaba, va rugam introduceti o parola mai puternica ");
-        }
-
         // confirmarea parolei
         cout << "va rugam sa introduceti din nou aceeasi parola pentru confirmare: ";
+        cin.ignore(); // Curatam buffer-ul pentru a permite utilizarea getline
         string parolaConfirmare;
         getline(cin, parolaConfirmare);
-        if (parolaConfirmare != parola)
+
+        while (parolaConfirmare != parola) // Continuăm să cerem parola dacă nu se potrivește
         {
             cout << "cele doua parole nu corespund. Incercati din nou";
             getline(cin, parolaConfirmare);
@@ -440,13 +434,14 @@ public:
     {
         // introducere detalii gresite la rezervare cursa tren
         // trebuie sa ii aratam utilizatorului ce curse sunt disponibile si cate locuri pe care le luam din csv ul operatorului
-        cout << "CURSELE DISPONIBILE SUNT: ";
+
         ifstream inFile("curse.csv");
         if (!inFile.is_open())
         {
             throw runtime_error("Nu s-a putut deschide fisierul curse.csv");
             return;
         }
+
         // deschidem un fisier temporar pentru a actualiza informatiile despre locuri
         ofstream tempFile("curse_temp.csv");
         if (!tempFile.is_open())
@@ -455,8 +450,8 @@ public:
         }
 
         // verificam daca exista cursa in fiserul curse.csv
-
-        bool cursaGasita = false;
+        cout << "CURSELE DISPONIBILE SUNT: ";
+        bool cursaGasita = false; // pt a determina daca s a gasit cursa
 
         // afisam tot ce se afla in fisierul curese.csv
         string line;
@@ -466,28 +461,37 @@ public:
             string fileDestinatie, filePlecare, fileData, fileOra;
             int fileClasa, fileNumarLocuri;
 
+            // citim campurile din linie
             getline(ss, fileDestinatie, ',');
             getline(ss, filePlecare, ',');
             getline(ss, fileData, ',');
             getline(ss, fileOra, ',');
 
             ss >> fileClasa;
+            ss.ignore();
             ss >> fileNumarLocuri;
-            // daca cursa exista o rezervam si o sa scada numamrul de locuri
-            if (fileDestinatie == destinatie && filePlecare == plecare && fileData == data && fileOra == ora)
+
+            // afisam cursa curenta
+            //  Afișăm cursa curentă
+            cout << filePlecare << " -> " << fileDestinatie << " | Data: " << fileData
+                 << " | Ora: " << fileOra << " | Clasa: " << fileClasa
+                 << " | Locuri disponibile: " << fileNumarLocuri << endl;
+
+            // Verificăm dacă aceasta este cursa căutată
+            if (fileDestinatie == destinatie && filePlecare == plecare && fileData == data && fileOra == ora && fileClasa == clasa)
             {
                 cursaGasita = true;
-                if (fileNumarLocuri > 0)
+                if (fileNumarLocuri > nrlocuri)
                 {
                     // actualizam nummarul de locuri disponibile
-                    fileNumarLocuri--;
-                    cout << "Loc rezervat cu succes! Locuri ramase: " << fileNumarLocuri << endl;
+                    fileNumarLocuri -= nrlocuri;
+                    cout << "Locuri rezervat cu succes! Locuri ramase: " << fileNumarLocuri << endl;
                 }
                 else
                 {
-                    cout << "Nu mai sunt locuri disponibile pwntru aceasta cursa!" << endl;
+                    cout << "Nu mai sunt locuri disponibile pentru aceasta cursa!" << endl;
                     tempFile << line << endl; // scriem linia originala
-                    continue;
+                    continue;                 // sarim la urmatoarea linie
                 }
             }
             // scriem linia (modificata sau nemodificata) in fisierul temporar
@@ -625,19 +629,35 @@ int main()
                 cin >> username;
 
                 Utilizator utilizator(username, "", ""); // obiectul
+
                 if (optiuneUtilizator == 1)
                 {
+                    cout << "introduceti email: ";
+                    cin >> email;
+                    // Buclă pentru cererea parolei
+                    while (true)
+                    {
+                        cout << "Introduceti parola: ";
+                        cin >> password;
+
+                        string passwordStrengthLevel = utilizator.passwordStrength(password);
+                        if (passwordStrengthLevel == "weak")
+                        {
+                            cout << "Parola introdusa este slaba, va rugam introduceti o parola mai puternica." << endl;
+                        }
+                        else
+                        {
+                            cout << "Parola acceptata." << endl;
+                            break; // Ieșim din buclă dacă parola este suficient de puternică
+                        }
+                    }
                     try
                     {
-                        cout << "introduceti email: ";
-                        cin >> email;
-                        cout << "introduceti parola: ";
-                        cin >> password;
                         utilizator.autentificare(username, email, password);
                     }
                     catch (const exception &e)
                     {
-                        cout << "eroare la autentificare: " << e.what() << endl;
+                        cout << "Eroare: " << e.what() << endl;
                     }
                 }
                 else if (optiuneUtilizator == 2)
@@ -657,7 +677,7 @@ int main()
                         if (rezervareOptiune == 1)
                         {
                             string destinatie, plecare, data, ora;
-                            int clasa, locuri = 0;
+                            int clasa, locuri;
                             cout << "Introduceti destinatia: ";
                             cin.ignore();
                             getline(cin, destinatie);
@@ -669,6 +689,8 @@ int main()
                             cin >> ora;
                             cout << "Introduceti clasa trenului (1 sau 2): ";
                             cin >> clasa;
+                            cout << "Introduceti numarul de locuri pe care doriti sa le rezervati: ";
+                            cin >> locuri;
 
                             utilizator.rezervareLoc(username, destinatie, plecare, data, ora, clasa, locuri);
                         }
