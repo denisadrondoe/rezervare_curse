@@ -109,7 +109,7 @@ class Operator(private val username: String, private val password: String) {
         }
 
         if (!found) {
-            throw IllegalArgumentException("LOGIN NEREUȘIT!! Username sau parola greșită!")
+            throw IllegalArgumentException("LOGIN NEREUSIT!! Username sau parola gresita!")
         }
     }
 
@@ -118,22 +118,22 @@ class Operator(private val username: String, private val password: String) {
         if (cursa.destinatie.isEmpty() || cursa.plecare.isEmpty() || 
             cursa.data.isEmpty() || cursa.ora.isEmpty() || 
             cursa.clasa == 0 || cursa.numarLocuri == 0) {
-            throw IllegalArgumentException("Nu ați completat toate datele despre cursă!")
+            throw IllegalArgumentException("Nu ati completat toate datele despre cursa!")
         }
 
         // Validare pentru formatul datei
         if (!Regex("""\d{2}/\d{2}/\d{4}""").matches(cursa.data)) {
-            throw IllegalArgumentException("Format dată greșit! Încercați să introduceți data sub forma: DD/MM/YYYY")
+            throw IllegalArgumentException("Format data gresit! Incercati sa introduceti data sub forma: DD/MM/YYYY")
         }
 
         // Verificare dacă numele orașului este valid
         if (!cursa.isCityNameValid(cursa.destinatie) || !cursa.isCityNameValid(cursa.plecare)) {
-            throw IllegalArgumentException("Orașul conține caractere nevalide, folosiți doar litere și spații!")
+            throw IllegalArgumentException("Orasul contine caractere nevalide, folositi doar litere si spatii!")
         } 
 
         // Verificare dacă data este în trecut
         if (cursa.isPastDate(cursa.data)) {
-            throw IllegalArgumentException("Data pe care ați introdus-o este din trecut!")
+            throw IllegalArgumentException("Data pe care ati introdus-o este din trecut!")
         }
 
         val outFile = File("curse.csv").apply {
@@ -143,14 +143,14 @@ class Operator(private val username: String, private val password: String) {
         outFile.appendText(
             "${cursa.destinatie},${cursa.plecare},${cursa.data},${cursa.ora},${cursa.clasa},${cursa.numarLocuri}\n"
         )
-        println("Cursa a fost adăugată cu succes!!")
+        println("Cursa a fost adaugata cu succes!!")
     }
 
     // Ștergerea unei curse
     fun stergeCursa(destinatie: String, plecare: String, data: String, ora: String) {
         val inFile = File("curse.csv")
         if (!inFile.exists()) {
-            throw RuntimeException("Nu s-a putut deschide fișierul pentru citire.")
+            throw RuntimeException("Nu s-a putut deschide fisierul pentru citire.")
         }
 
         val tempFile = File("temp.csv")
@@ -176,14 +176,14 @@ class Operator(private val username: String, private val password: String) {
 
         if (!found) {
             tempFile.delete()
-            throw IllegalArgumentException("Cursa specificată nu a fost găsită")
+            throw IllegalArgumentException("Cursa specificata nu a fost gasita")
         }
 
         if (!inFile.delete() || !tempFile.renameTo(inFile)) {
-            throw RuntimeException("Eroare la actualizarea fișierului curse.csv")
+            throw RuntimeException("Eroare la actualizarea fisierului curse.csv")
         }
 
-        println("Cursa a fost ștearsă cu succes!")
+        println("Cursa a fost stearsa cu succes!")
     }
 }
 
@@ -192,7 +192,7 @@ class Utilizator(private val username: String, private val email: String, privat
     // Email validation
     fun isValidEmail(email: String): Boolean {
         if (!email.first().isLetter()) {
-            throw IllegalArgumentException("Email invalid: primul caracter nu este o literă!")
+            throw IllegalArgumentException("Email invalid: primul caracter nu este o litera!")
         }
 
         val atPos = email.indexOf('@')
@@ -231,13 +231,12 @@ class Utilizator(private val username: String, private val email: String, privat
         val file = File("utilizator.csv")
         if (!file.exists()) return false
 
-        file.forEachLine { line ->
-            val (existingUsername, existingEmail, _) = line.split(",")
-            if (existingUsername == username || existingEmail == email) {
-                return true
+        return file.useLines { lines ->
+            lines.any { line ->
+                val (existingUsername, existingEmail, _) = line.split(",")
+                existingUsername == username || existingEmail == email
             }
         }
-        return false
     }
 
     // Register a user
@@ -253,27 +252,29 @@ class Utilizator(private val username: String, private val email: String, privat
         val encryptedPassword = encryptVigenere(parola, "key")
 
         File("utilizator.csv").appendText("$username,$email,$encryptedPassword\n")
-        println("Autentificare reușită!")
+        println("Autentificare reusita!")
     }
 
     // User login
     fun login(user: String, pass: String) {
         val file = File("utilizator.csv")
         if (!file.exists()) {
-            throw FileNotFoundException("Fișierul utilizator.csv nu există!")
+            throw FileNotFoundException("Fisierul utilizator.csv nu exista!")
         }
 
         val encryptedPassword = encryptVigenere(pass, "key")
-        val found = file.readLines().any { line ->
-            val (fileUser, _, filePass) = line.split(",")
-            fileUser == user && filePass == encryptedPassword
+        val found = file.useLines { lines ->
+            lines.any { line ->
+                val (fileUser, _, filePass) = line.split(",")
+                fileUser == user && filePass == encryptedPassword
+            }
         }
 
         if (!found) {
-            throw IllegalArgumentException("LOGIN NEREUȘIT! Username sau parolă greșită!")
+            throw IllegalArgumentException("LOGIN NEREUSIT! Username sau parola gresita!")
         }
 
-        println("Login reușit!")
+        println("Login reusit!")
     }
 
     // Reserve seats for a train
@@ -283,7 +284,7 @@ class Utilizator(private val username: String, private val email: String, privat
     ) {
         val file = File("curse.csv")
         if (!file.exists()) {
-            throw FileNotFoundException("Fișierul curse.csv nu există!")
+            throw FileNotFoundException("Fisierul curse.csv nu exista!")
         }
 
         val tempFile = File("curse_temp.csv")
@@ -292,16 +293,25 @@ class Utilizator(private val username: String, private val email: String, privat
         file.useLines { lines ->
             tempFile.bufferedWriter().use { writer ->
                 lines.forEach { line ->
-                    val (fileDestinatie, filePlecare, fileData, fileOra, fileClasaStr, fileLocuriStr) = line.split(",")
-                    val fileClasa = fileClasaStr.toInt()
-                    var fileLocuri = fileLocuriStr.toInt()
+                    val parts = line.split(",")
+                    if (parts.size != 6) {
+                    throw IllegalArgumentException("Linia din fisier nu contine exact 6 campuri: $line")
+                    }
+
+                    val fileDestinatie = parts[0]
+                    val filePlecare = parts[1]
+                    val fileData = parts[2]
+                    val fileOra = parts[3]
+                    val fileClasa = parts[4].toIntOrNull() ?: throw IllegalArgumentException("Clasa trebuie sa fie un numar!")
+                    var fileLocuri = parts[5].toIntOrNull() ?: throw IllegalArgumentException("Numarul de locuri trebuie să fie un numar!")
+
 
                     if (fileDestinatie == destinatie && filePlecare == plecare &&
                         fileData == data && fileOra == ora && fileClasa == clasa) {
                         found = true
                         if (fileLocuri >= nrlocuri) {
                             fileLocuri -= nrlocuri
-                            println("Locuri rezervate cu succes! Locuri rămase: $fileLocuri")
+                            println("Locuri rezervate cu succes! Locuri ramase: $fileLocuri")
                         } else {
                             throw IllegalArgumentException("Nu sunt suficiente locuri disponibile!")
                         }
@@ -312,7 +322,7 @@ class Utilizator(private val username: String, private val email: String, privat
         }
 
         if (!found) {
-            throw IllegalArgumentException("Cursa specificată nu există!")
+            throw IllegalArgumentException("Cursa specificata nu exista!")
         }
 
         file.delete()
@@ -343,22 +353,47 @@ class Utilizator(private val username: String, private val email: String, privat
 fun afiseazaCurseDisponibile() {
     val file = File("curse.csv")
     if (!file.exists()) {
-        throw FileNotFoundException("Fișierul curse.csv nu există!")
+        throw FileNotFoundException("Fisierul curse.csv nu exista!")
     }
 
     println("CURSELE DISPONIBILE SUNT:")
     file.forEachLine { line ->
-        val (destinatie, plecare, data, ora, clasa, locuri) = line.split(",")
-        println("$destinatie -> $plecare | Data: $data | Ora: $ora | Clasa: $clasa | Locuri disponibile: $locuri")
+        val parts = line.split(",")
+        
+        // Verificăm dacă linia conține exact 6 elemente
+        if (parts.size != 6) {
+            println("Linia nu contine date valide: $line")
+            return@forEachLine
+        }
+
+        val destinatie = parts[0]
+        val plecare = parts[1]
+        val data = parts[2]
+        val ora = parts[3]
+        val clasa = parts[4]
+        val locuri = parts[5]
+
+        // Validăm dacă clasa și locurile sunt valori numerice
+        val clasaInt = clasa.toIntOrNull()
+        val locuriInt = locuri.toIntOrNull()
+
+        if (clasaInt == null || locuriInt == null) {
+            println("Linia contine date invalide pentru clasa sau numarul de locuri: $line")
+            return@forEachLine
+        }
+
+        // Afișăm informațiile despre cursă
+        println("$destinatie -> $plecare | Data: $data | Ora: $ora | Clasa: $clasaInt | Locuri disponibile: $locuriInt")
     }
 }
 
+
 fun main() {
     try {
-        println("Bine ați venit!")
+        println("Bine ati venit!")
 
         while (true) {
-            println("\nSelectați rolul dumneavoastră (operator sau utilizator) sau tastati 'exit' pentru a ieși: ")
+            println("\nSelectati rolul dumneavoastra (operator sau utilizator) sau tastati 'exit' pentru a iesi: ")
             val userType = readLine()?.lowercase() ?: ""
 
             if (userType == "exit") {
@@ -368,51 +403,51 @@ fun main() {
 
             when (userType) {
                 "operator" -> {
-                    println("Introduceți username-ul operatorului: ")
+                    println("Introduceti username-ul operatorului: ")
                     val username = readLine() ?: ""
-                    println("Introduceți parola operatorului: ")
+                    println("Introduceti parola operatorului: ")
                     val password = readLine() ?: ""
 
                     val operator = Operator(username, password)
 
                     try {
                         operator.login(username, password)
-                        println("Login reușit pentru operator!")
+                        println("Login reusit pentru operator!")
 
                         var optiune: Int
                         do {
                             println("\nMeniu operator:")
-                            println("1. Adaugă cursă")
-                            println("2. Șterge cursă")
+                            println("1. Adauga cursa")
+                            println("2. Sterge cursa")
                             println("3. Logout")
-                            print("Selectați o opțiune: ")
+                            print("Selectati o optiune: ")
                             optiune = readLine()?.toIntOrNull() ?: 0
 
                             when (optiune) {
                                 1 -> {
                                     val cursa = Cursa()
 
-                                    print("Introduceți destinația: ")
+                                    print("Introduceti destinatia: ")
                                     val destinatie = readLine() ?: ""
                                     cursa.destinatie = destinatie
 
-                                    print("Introduceți locul de plecare: ")
+                                    print("Introduceti locul de plecare: ")
                                     val plecare = readLine() ?: ""
                                     cursa.plecare = plecare
 
-                                    print("Introduceți data (DD/MM/YYYY): ")
+                                    print("Introduceti data (DD/MM/YYYY): ")
                                     val data = readLine() ?: ""
                                     cursa.data = data
 
-                                    print("Introduceți ora (HH:MM): ")
+                                    print("Introduceti ora (HH:MM): ")
                                     val ora = readLine() ?: ""
                                     cursa.ora = ora
 
-                                    print("Introduceți clasa trenului (1 sau 2): ")
+                                    print("Introduceti clasa trenului (1 sau 2): ")
                                     val clasa = readLine()?.toIntOrNull() ?: 0
                                     cursa.clasa = clasa
 
-                                    print("Introduceți numărul de locuri: ")
+                                    print("Introduceti numarul de locuri: ")
                                     val locuri = readLine()?.toIntOrNull() ?: 0
                                     cursa.numarLocuri = locuri
 
@@ -420,16 +455,16 @@ fun main() {
                                 }
 
                                 2 -> {
-                                    print("Introduceți destinația cursei de șters: ")
+                                    print("Introduceti destinatia cursei de sters: ")
                                     val destinatie = readLine() ?: ""
 
-                                    print("Introduceți locul de plecare: ")
+                                    print("Introduceti locul de plecare: ")
                                     val plecare = readLine() ?: ""
 
-                                    print("Introduceți data cursei de șters (DD/MM/YYYY): ")
+                                    print("Introduceti data cursei de sters (DD/MM/YYYY): ")
                                     val data = readLine() ?: ""
 
-                                    print("Introduceți ora cursei de șters (HH:MM): ")
+                                    print("Introduceti ora cursei de sters (HH:MM): ")
                                     val ora = readLine() ?: ""
 
                                     operator.stergeCursa(destinatie, plecare, data, ora)
@@ -446,19 +481,19 @@ fun main() {
                     println("2. Login utilizator existent")
                     val optiuneUtilizator = readLine()?.toIntOrNull() ?: 0
 
-                    print("Introduceți username-ul: ")
+                    print("Introduceti username-ul: ")
                     val username = readLine() ?: ""
 
                     val utilizator = Utilizator(username, "", "")
 
                     when (optiuneUtilizator) {
                         1 -> {
-                            print("Introduceți email: ")
+                            print("Introduceti email: ")
                             var email = readLine() ?: ""
 
                             try {
                                 while (utilizator.isDuplicate(username, email)) {
-                                    println("Username-ul sau emailul sunt deja folosite. Introduceți altele:")
+                                    println("Username-ul sau emailul sunt deja folosite. Introduceti altele:")
                                     print("Nume utilizator: ")
                                     email = readLine() ?: ""
                                     utilizator.isValidEmail(email)
@@ -470,7 +505,7 @@ fun main() {
                             var passwordSet = false
                             var password: String
                             while (!passwordSet) {
-                                print("Introduceți parola: ")
+                                print("Introduceti parola: ")
                                 password = readLine() ?: ""
 
                                 try {
@@ -486,33 +521,33 @@ fun main() {
 
                         2 -> {
                             try {
-                                print("Introduceți parola: ")
+                                print("Introduceti parola: ")
                                 val password = readLine() ?: ""
                                 utilizator.login(username, password)
-                                println("Login reușit!")
+                                println("Login reusit!")
 
-                                print("Doriți să rezervați o călătorie? (1 pentru DA, 0 pentru NU): ")
+                                print("Doriti sa rezervati o calatorie? (1 pentru DA, 0 pentru NU): ")
                                 val rezervareOptiune = readLine()?.toIntOrNull() ?: 0
 
                                 if (rezervareOptiune == 1) {
                                     afiseazaCurseDisponibile()
 
-                                    print("Introduceți destinația: ")
+                                    print("Introduceti destinatia: ")
                                     val destinatie = readLine() ?: ""
 
-                                    print("Introduceți locul de plecare: ")
+                                    print("Introduceti locul de plecare: ")
                                     val plecare = readLine() ?: ""
 
-                                    print("Introduceți data (DD/MM/YYYY): ")
+                                    print("Introduceti data (DD/MM/YYYY): ")
                                     val data = readLine() ?: ""
 
-                                    print("Introduceți ora (HH:MM): ")
+                                    print("Introduceti ora (HH:MM): ")
                                     val ora = readLine() ?: ""
 
-                                    print("Introduceți clasa trenului (1 sau 2): ")
+                                    print("Introduceti clasa trenului (1 sau 2): ")
                                     val clasa = readLine()?.toIntOrNull() ?: 0
 
-                                    print("Introduceți numărul de locuri: ")
+                                    print("Introduceti numarul de locuri: ")
                                     val locuri = readLine()?.toIntOrNull() ?: 0
 
                                     utilizator.rezervareLoc(username, destinatie, plecare, data, ora, clasa, locuri)
@@ -524,7 +559,7 @@ fun main() {
                     }
                 }
 
-                else -> println("Rol invalid. Încercați din nou.")
+                else -> println("Rol invalid. Incercati din nou.")
             }
         }
     } catch (e: Exception) {
