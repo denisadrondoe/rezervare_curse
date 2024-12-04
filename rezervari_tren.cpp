@@ -60,38 +60,116 @@ string encryptVigenere(const string &text, const string &key)
     return cipher_text;
 }
 
-//clasa pentru Cursa
-class Cursa 
+// clasa pentru Cursa
+class Cursa
 {
-    private:
+private:
     string destinatie;
     string plecare;
     string data;
     string ora;
     int clasa;
     int numarLocuri;
-    public:
-    Cursa(string destinatie, string plecare, string data, string ora, int clasa, int numarLocuri) 
+
+public:
+    // Constructor default
+    Cursa() : clasa(0), numarLocuri(0) {}
+
+    // constructor cu parametrii
+    Cursa(string destinatie, string plecare, string data, string ora, int clasa, int numarLocuri)
         : destinatie(destinatie), plecare(plecare), data(data), ora(ora), clasa(clasa), numarLocuri(numarLocuri) {}
 
-    bool isPastDate() const {
-        tm dateStruct = {};
-        sscanf(data.c_str(), "%2d/%2d/%4d", &dateStruct.tm_mday, &dateStruct.tm_mon, &dateStruct.tm_year);
-        dateStruct.tm_mon -= 1;     // lunile sunt 0-11
-        dateStruct.tm_year -= 1900; // anul este calculat începând de la 1900
-
-        time_t timeNow = time(0);
-        tm *currentTime = localtime(&timeNow);
-
-        return difftime(mktime(&dateStruct), mktime(currentTime)) < 0;
+    // setter
+    void setDestinatie(string destinatie)
+    {
+        this->destinatie = destinatie;
+    }
+    void setPlecare(string plecare)
+    {
+        this->plecare = plecare;
+    }
+    void setData(string data)
+    {
+        this->data = data;
+    }
+    void setOra(string ora)
+    {
+        this->ora = ora;
+    }
+    void setClasa(int clasa)
+    {
+        this->clasa = clasa;
+    }
+    void setNumarLocuri(int numarLocuri)
+    {
+        this->numarLocuri = numarLocuri;
     }
 
-    string getDetails() const {
+    // getter
+    string getDestinatie()
+    {
+        return destinatie;
+    }
+    string getPlecare()
+    {
+        return plecare;
+    }
+    string getData()
+    {
+        return data;
+    }
+    string getOra()
+    {
+        return ora;
+    }
+    int getClasa()
+    {
+        return clasa;
+    }
+    int getNumarLocuri()
+    {
+        return numarLocuri;
+    }
+
+    // verificam daca data este in trecut
+    bool isPastDate(string &data)
+    {
+        tm dateStruct = {};
+        sscanf(data.c_str(), "%2d/%2d/%4d", &dateStruct.tm_mday, &dateStruct.tm_mon, &dateStruct.tm_year);
+
+        dateStruct.tm_mon -= 1;     // lunile sunt 0-11, deci trebuie să scădem 1
+        dateStruct.tm_year -= 1900; // anul este calculat începând de la 1900
+
+        time_t timeNow = time(0); // obtinem data curenta
+        tm *currentTime = localtime(&timeNow);
+
+        return difftime(mktime(&dateStruct), mktime(currentTime)) < 0; // calculeaza diferenta in secunde dintre cele doua date
+        // pentru a putea vedea daca este in trecut
+    }
+
+    // verificam daca orasul contine caractere nepermise
+    bool CityName(string &city)
+    {
+        // Verificam fiecare caracter din sirul city
+        for (char c : city)
+        {
+            // daca caracterul nu este o litera sau un spatiu asta inseamna caorasul are in componenta sa caractere nedorite
+            if (!isalpha(c) && c != ' ')
+            {
+                return false; // numele pe care l am introdus pentru oras nu este corect
+            }
+        }
+        return true;
+    }
+
+    string getDetails() const
+    {
         stringstream ss;
         ss << destinatie << ", " << plecare << ", " << data << ", " << ora << ", Clasa: " << clasa << ", Locuri: " << numarLocuri;
         return ss.str();
     }
 };
+
 // clasele operator si utilizator
 // Operator: activități de login și adăugare/ștergere curse (contul este deja existent în sistem cu user și parolă, iar
 // acestea se adauga dintr-un fisier csv)
@@ -146,60 +224,29 @@ public:
         }
     }
 
-    // verificam daca data este in trecut
-    bool isPastDate(const string &date)
-    {
-        tm dateStruct = {};
-        sscanf(date.c_str(), "%2d/%2d/%4d", &dateStruct.tm_mday, &dateStruct.tm_mon, &dateStruct.tm_year);
-
-        dateStruct.tm_mon -= 1;     // lunile sunt 0-11, deci trebuie să scădem 1
-        dateStruct.tm_year -= 1900; // anul este calculat începând de la 1900
-
-        time_t timeNow = time(0); // obtinem data curenta
-        tm *currentTime = localtime(&timeNow);
-
-        return difftime(mktime(&dateStruct), mktime(currentTime)) < 0; // calculeaza diferenta in secunde dintre cele doua date
-        // pentru a putea vedea daca este in trecut
-    }
-
-    // verificam daca orasul contine caractere nepermise
-    bool CityName(const string &city)
-    {
-        // Verificam fiecare caracter din sirul city
-        for (char c : city)
-        {
-            // daca caracterul nu este o litera sau un spatiu asta inseamna caorasul are in componenta sa caractere nedorite
-            if (!isalpha(c) && c != ' ')
-            {
-                return false; // numele pe care l am introdus pentru oras nu este corect
-            }
-        }
-        return true;
-    }
-
     // Adaugare cursa
-    void adaugaCursa(string destinatie, string plecare, string data, string ora, int clasa, int numarLocuri)
+    void adaugaCursa(Cursa cursa)
     {
         // cazul in care a lasat vreo informatie necompletata
-        if (destinatie.empty() || plecare.empty() || data.empty() || ora.empty() || clasa == 0 || numarLocuri == 0)
+        if (cursa.getDestinatie().empty() || cursa.getPlecare().empty() || cursa.getData().empty() || cursa.getOra().empty() || cursa.getClasa() == 0 || cursa.getNumarLocuri() == 0)
         {
             throw invalid_argument("Nu ati completat toate datele despre cursa!");
         }
 
         // validare pentru data format: DD/MM/YYYY
-        if (data.size() != 10 || data[2] != '/' || data[5] != '/')
+        if (cursa.getData().size() != 10 || cursa.getData()[2] != '/' || cursa.getData()[5] != '/')
         {
             throw invalid_argument("Format data gresit! Incercati sa introduceti data sub forma: DD/MM/YYYY");
         }
 
         // verificam daca numele orasului este valid
-        if (!CityName(destinatie) || !CityName(plecare))
+        if (!cursa.CityName(cursa.getDestinatie()) || !cursa.CityName(cursa.getPlecare()))
         {
             throw invalid_argument("orasul contine caractere nevalide, folositi doar litere si spatii!!");
         }
 
         // verificam daca data este in trecut
-        if (isPastDate(data))
+        if (cursa.isPastDate(cursa.getData()))
         {
             throw invalid_argument("Data pe care ati introdus-o este din trecut!");
         }
@@ -213,7 +260,7 @@ public:
 
         // mai avem nevoie de: ora, clasa si numarul de locuri disponibile
 
-        outFile << destinatie << "," << plecare << "," << data << "," << ora << "," << clasa << "," << numarLocuri << endl;
+        outFile << cursa.getDestinatie() << "," << cursa.getPlecare() << "," << cursa.getData() << "," << cursa.getOra() << "," << cursa.getClasa() << "," << cursa.getNumarLocuri() << endl;
         outFile.close();
         cout << "Cursa a fost adaugata cu succes!!" << endl;
     }
@@ -627,7 +674,6 @@ int main()
                 {
                     op.login(username, password);
                     cout << "Login reusit pentru operator!" << endl;
-
                     int optiune;
                     do
                     {
@@ -638,26 +684,39 @@ int main()
                         cout << "Selectati o optiune: ";
                         cin >> optiune;
 
-                        if (optiune == 1)
+                        if (optiune == 1) // adaugam cursa
                         {
+                            Cursa cursa; // instantierea unui obiect de tip cursa
+
                             string destinatie, plecare, data, ora;
                             int clasa, locuri;
+
                             cout << "introduceti destinatia: ";
                             cin.ignore(); // elimina caracterele ramase in buffer
                             getline(cin, destinatie);
+                            cursa.setDestinatie(destinatie);
 
                             cout << "Introduceti locul de plecare: ";
                             getline(cin, plecare);
+                            cursa.setPlecare(plecare);
+
                             cout << "introduceti data (DD/MM/YYYY): ";
                             cin >> data;
+                            cursa.setData(data);
+
                             cout << "Introduceti ora (HH:MM): ";
                             cin >> ora;
+                            cursa.setOra(ora);
+
                             cout << "Introduceti clasa trenului (1 sau 2): ";
                             cin >> clasa;
+                            cursa.setClasa(clasa);
+
                             cout << "Introduceti numarul de locuri: ";
                             cin >> locuri;
+                            cursa.setNumarLocuri(locuri);
 
-                            op.adaugaCursa(destinatie, plecare, data, ora, clasa, locuri);
+                            op.adaugaCursa(cursa);
                         }
                         else if (optiune == 2)
                         {
