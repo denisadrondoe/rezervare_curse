@@ -8,6 +8,7 @@
 
 using namespace std;
 // implementam algoritmul Vigenère Cipher pentru criptarea parolelor
+
 // functia pentru extinderea cheii
 string extendKey(const string &text, const string &key)
 {
@@ -59,22 +60,54 @@ string encryptVigenere(const string &text, const string &key)
     return cipher_text;
 }
 
+//clasa pentru Cursa
+class Cursa 
+{
+    private:
+    string destinatie;
+    string plecare;
+    string data;
+    string ora;
+    int clasa;
+    int numarLocuri;
+    public:
+    Cursa(string destinatie, string plecare, string data, string ora, int clasa, int numarLocuri) 
+        : destinatie(destinatie), plecare(plecare), data(data), ora(ora), clasa(clasa), numarLocuri(numarLocuri) {}
+
+    bool isPastDate() const {
+        tm dateStruct = {};
+        sscanf(data.c_str(), "%2d/%2d/%4d", &dateStruct.tm_mday, &dateStruct.tm_mon, &dateStruct.tm_year);
+        dateStruct.tm_mon -= 1;     // lunile sunt 0-11
+        dateStruct.tm_year -= 1900; // anul este calculat începând de la 1900
+
+        time_t timeNow = time(0);
+        tm *currentTime = localtime(&timeNow);
+
+        return difftime(mktime(&dateStruct), mktime(currentTime)) < 0;
+    }
+
+    string getDetails() const {
+        stringstream ss;
+        ss << destinatie << ", " << plecare << ", " << data << ", " << ora << ", Clasa: " << clasa << ", Locuri: " << numarLocuri;
+        return ss.str();
+    }
+};
 // clasele operator si utilizator
+// Operator: activități de login și adăugare/ștergere curse (contul este deja existent în sistem cu user și parolă, iar
+// acestea se adauga dintr-un fisier csv)
 class Operator
 {
-    // Operator: activități de login și adăugare/ștergere curse (contul este deja existent în sistem cu user și parolă, iar
-    // acestea se adauga dintr-un fisier csv)
-public:
+private:
     string username;
     string password;
 
+public:
     Operator(string user, string pass) : username(user), password(pass) {} // facem un constructor si initializam user si pass
 
     // Login pentru operatori
     void login(string user, string pass)
     {
-        // citim din fisierul csv
-        ifstream file("operator.csv"); // citeste fisierl csv
+        ifstream file("operator.csv"); // citeste fisierul csv
         if (!file.is_open())
         {
             cout << "Nu s a putut deschide fisierul operator.csv" << endl;
@@ -92,6 +125,7 @@ public:
         {
             stringstream ss(line); // transforma linia intr-un flux
             string fileUser, filePass;
+
             getline(ss, fileUser, ','); // Citește până la virgulă
             getline(ss, filePass, ',');
 
@@ -111,7 +145,8 @@ public:
             throw invalid_argument("LOGIN NEREUSIT!! Username sau parola gresita!");
         }
     }
-    // verificamdaca data este in trecut
+
+    // verificam daca data este in trecut
     bool isPastDate(const string &date)
     {
         tm dateStruct = {};
@@ -148,7 +183,7 @@ public:
         // cazul in care a lasat vreo informatie necompletata
         if (destinatie.empty() || plecare.empty() || data.empty() || ora.empty() || clasa == 0 || numarLocuri == 0)
         {
-            throw invalid_argument("Nu ati completat toate datele despre plecarea dumneavoastra!");
+            throw invalid_argument("Nu ati completat toate datele despre cursa!");
         }
 
         // validare pentru data format: DD/MM/YYYY
@@ -307,61 +342,67 @@ public:
     string passwordStrength(const string &password)
     {
         bool hasLower = false, hasUpper = false, hasDigit = false, hasSpecial = false;
-        try
+        if (password.size() < 8)
         {
-            if (password.size() < 8)
-            {
-                throw "weak";
-            }
-            else
-            {
-                for (char c : password)
-                { // aici ne ia fiecare caracter din parola si il verifica
-                    if (islower(c))
-                        hasLower = true;
-                    if (isupper(c))
-                        hasUpper = true;
-                    if (isdigit(c))
-                        hasDigit = true;
-                    if (ispunct(c))
-                        hasSpecial = true; // carcatere speciale
-                }
-
-                // daca parola le are pe toate inseamna ca este strong
-                if (hasLower == true && hasUpper == true && hasDigit == true && hasSpecial == true)
-                {
-                    return "good";
-                }
-                else if (hasLower == true && hasUpper == true && hasDigit == true && hasSpecial == false)
-                {
-                    return "ok";
-                }
-                else if (hasLower == true && hasUpper == true && hasDigit == false && hasSpecial == true)
-                {
-                    return "ok";
-                }
-                else if (hasLower == true && hasUpper == false && hasDigit == true && hasSpecial == true)
-                {
-                    return "ok";
-                }
-                else if (hasLower == false && hasUpper == true && hasDigit == true && hasSpecial == true)
-                {
-                    return "ok";
-                }
-                else
-                {
-                    throw "weak";
-                }
-            }
+            throw invalid_argument("password is too short. Minimum length is 8 characters.");
         }
-        catch (...)
+
+        for (char c : password)
+        { // aici ne ia fiecare caracter din parola si il verifica
+            if (islower(c))
+                hasLower = true;
+            if (isupper(c))
+                hasUpper = true;
+            if (isdigit(c))
+                hasDigit = true;
+            if (ispunct(c))
+                hasSpecial = true; // carcatere speciale
+        }
+
+        int strength = hasLower + hasUpper + hasDigit + hasSpecial;
+
+        if (strength < 2)
         {
-            cout << "parola introdusa este prea slaba, va rugam introduceti o parola mai puternica: ";
+            throw invalid_argument("Password is weak.");
+        }
+        else if (strength == 2)
+        {
+            return "ok";
+        }
+        else
+        {
+            return "good";
         }
     }
-    // autentificare nereusita (format email incorect, parola prea slaba )
-    // trbuie si cu chestie din aia cu confirma parola si sa abordez caul in care parola repetata nu e corecta
-    // cand adaug parola in csv ul utilizator trebuie sa o criptez cu algoritmul ala
+    // functie pentru a verifica daca username ul sau emeil ul exista deja in fisierul utilizator.csv
+    bool isDuplicate(const string &username, const string &email)
+    {
+        ifstream inFile("utilizator.csv");
+
+        if (!inFile.is_open())
+        {
+            throw runtime_error("Nu s a putut deschide fisierul");
+            ;
+        }
+
+        string line;
+        while (getline(inFile, line))
+        {
+            stringstream ss(line);
+            string existingUsername, existingEmail;
+
+            getline(ss, existingUsername, ',');
+            getline(ss, existingEmail, ',');
+
+            if (existingUsername == username || existingEmail == email)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     void autentificare(string username, string email, string parola)
     {
         // verificam daca formatul email-ului este corect
@@ -516,6 +557,7 @@ public:
         rezervariOut.close();
     }
 };
+
 void afiseazaCurseDisponibile()
 {
     ifstream inFile("curse.csv");
@@ -542,7 +584,7 @@ void afiseazaCurseDisponibile()
         ss >> locuri;
 
         // Afișăm cursa curentă
-        cout << destinatie << " -> " <<  plecare << " | Data: " << data
+        cout << destinatie << " -> " << plecare << " | Data: " << data
              << " | Ora: " << ora << " | Clasa: " << clasa
              << " | Locuri disponibile: " << locuri << endl;
     }
@@ -660,23 +702,50 @@ int main()
                 {
                     cout << "introduceti email: ";
                     cin >> email;
-                    // Buclă pentru cererea parolei
-                    while (true)
+
+                    // verificam daca username ul sau email ul exista deja in fisierul utilizator.csv
+                    try
+                    {
+                        // verificam daca username ul sau email ul exista deja
+                        while (utilizator.isDuplicate(username, email))
+                        {
+                            cout << "Username-ul sau emailul sunt deja folosite. Introduceti altele:\n";
+                            cout << "Nume utilizator: ";
+                            cin >> username;
+                            cout << "Email: ";
+                            cin >> email;
+                            utilizator.isValidEmail(email); // validam din nou email ul
+                        }
+                    }
+                    catch (const invalid_argument &e)
+                    {
+                        cout << "Eroare: " << e.what() << endl;
+                    }
+                    catch (const runtime_error &e)
+                    {
+                        cout << "Eroare la citirea fisierului: " << e.what() << endl;
+                    }
+
+                    // Buclă pentru cererea parolei, doar daca username ul si email ul sunt valide
+                    bool passwordSet = false;
+                    while (!passwordSet)
                     {
                         cout << "Introduceti parola: ";
                         cin >> password;
 
-                        string passwordStrengthLevel = utilizator.passwordStrength(password);
-                        if (passwordStrengthLevel == "weak")
+                        try
                         {
-                            cout << "Parola introdusa este slaba, va rugam introduceti o parola mai puternica." << endl;
+                            string strength = utilizator.passwordStrength(password);
+                            cout << "Password strength: " << strength << endl;
+                            passwordSet = true; // flag pentru a iesi din bucla
                         }
-                        else
+                        catch (const invalid_argument &e)
                         {
-                            cout << "Parola acceptata." << endl;
-                            break; // Ieșim din buclă dacă parola este suficient de puternică
+                            cout << "Error: " << e.what() << endl;
+                            cout << "Please try again.\n";
                         }
                     }
+                    cout << "Password succesfully set!\n";
                     try
                     {
                         utilizator.autentificare(username, email, password);
