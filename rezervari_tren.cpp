@@ -132,7 +132,7 @@ public:
     }
 
     // verificam daca data este in trecut
-    bool isPastDate(string &data)
+    bool isPastDate(string data)
     {
         tm dateStruct = {};
         sscanf(data.c_str(), "%2d/%2d/%4d", &dateStruct.tm_mday, &dateStruct.tm_mon, &dateStruct.tm_year);
@@ -148,7 +148,7 @@ public:
     }
 
     // verificam daca orasul contine caractere nepermise
-    bool CityName(string &city)
+    bool CityName(string city)
     {
         // Verificam fiecare caracter din sirul city
         for (char c : city)
@@ -160,6 +160,16 @@ public:
             }
         }
         return true;
+    }
+
+    bool rezervaLocuri(int nrLocuri)
+    {
+        if (numarLocuri >= nrLocuri)
+        {
+            numarLocuri -= nrLocuri;
+            return true; // Rezervare reușită
+        }
+        return false; // Nu există suficiente locuri
     }
 
     string getDetails() const
@@ -527,7 +537,6 @@ public:
         if (!inFile.is_open())
         {
             throw runtime_error("Nu s-a putut deschide fisierul curse.csv");
-            return;
         }
 
         // deschidem un fisier temporar pentru a actualiza informatiile despre locuri
@@ -540,7 +549,6 @@ public:
         // verificam daca exista cursa in fiserul curse.csv
         bool cursaGasita = false; // pt a determina daca s a gasit cursa
 
-        // afisam tot ce se afla in fisierul curese.csv
         string line;
         while (getline(inFile, line))
         {
@@ -558,26 +566,26 @@ public:
             ss.ignore();
             ss >> fileNumarLocuri;
 
+            // Instanțiem un obiect Cursa
+            Cursa cursa(fileDestinatie, filePlecare, fileData, fileOra, fileClasa, fileNumarLocuri);
+
             // Verificăm dacă aceasta este cursa căutată
             if (fileDestinatie == destinatie && filePlecare == plecare && fileData == data && fileOra == ora && fileClasa == clasa)
             {
                 cursaGasita = true;
-                if (fileNumarLocuri > nrlocuri)
+                if (cursa.rezervaLocuri(nrlocuri))
                 {
-                    // actualizam nummarul de locuri disponibile
-                    fileNumarLocuri -= nrlocuri;
-                    cout << "Locuri rezervat cu succes! Locuri ramase: " << fileNumarLocuri << endl;
+                    cout << "Locuri rezervat cu succes! Locuri ramase: " << cursa.getNumarLocuri()  << endl;
                 }
                 else
                 {
                     cout << "Nu mai sunt locuri disponibile pentru aceasta cursa!" << endl;
-                    tempFile << line << endl; // scriem linia originala
-                    continue;                 // sarim la urmatoarea linie
                 }
             }
             // scriem linia (modificata sau nemodificata) in fisierul temporar
 
-            tempFile << fileDestinatie << "," << filePlecare << "," << fileData << "," << fileOra << "," << fileClasa << "," << fileNumarLocuri << endl;
+            tempFile << cursa.getDestinatie() << "," << cursa.getPlecare() << "," << cursa.getData() << "," << cursa.getOra() 
+                 << "," << cursa.getClasa() << "," << cursa.getNumarLocuri() << endl;
         }
 
         inFile.close();
@@ -593,7 +601,7 @@ public:
             return;
         }
 
-        // adaugam detaliile rezervarii in fisierul rezervari
+        // adaugam detaliile rezervarii in fisierul rezervari.csv
         ofstream rezervariOut("rezervari.csv", ios::app);
         if (!rezervariOut.is_open())
         {
@@ -724,10 +732,13 @@ int main()
                             cout << "introduceti destinatia cursei de sters: ";
                             cin.ignore();
                             getline(cin, destinatie);
+
                             cout << "introduceti locul de plecare: ";
                             getline(cin, plecare);
+
                             cout << "introduceti data cursei de sters(DD/MM/YYYY): ";
                             cin >> data;
+
                             cout << "introduceti ora cursei de stres (HH:MM): ";
                             cin >> ora;
                             // nu mai punem clasa deoarece daca se anuleaza cursa se va anula pentru ambele clasa, deci trebuie sa fie sters in ambele cazuri
